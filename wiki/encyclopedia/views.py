@@ -1,6 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.urls import reverse
+from django.http import Http404
+
+import random
 
 from . import util
 from .forms import NewPageForm
@@ -44,6 +47,34 @@ def new(request):
             
             if existing_entry:
                 messages.error(request, "An entry with this title already exists.")
-                return redirect(reverse("encyclopedia:new"))
+                return render(request, "encyclopedia/new.html", {"form": form})
             util.save_entry(form.cleaned_data["title"], form.cleaned_data["content"])
+        else:
+            return render(request, "encyclopedia/new.html", {"form": form})
 
+    return render(request, "encyclopedia/new.html", {"form": NewPageForm()})
+
+
+def edit(request, title):
+    if request.method == "POST":
+        form = NewPageForm(request.POST)
+        if form.is_valid():
+            util.save_entry(form.cleaned_data["title"], form.cleaned_data["content"])
+    else:
+        return render(request, "encyclopedia/new.html", {"form": form})
+
+    content = util.get_entry(title)
+
+    if not content:
+        return Http404("Page not found")
+
+    return render(request, "encyclopedia/new.html", {
+        "form": NewPageForm(initial={"title": title, "content": content})
+    })
+    
+
+def random_page(request):
+    entries = util.list_entries()
+    entry = random.randint(0, len(entries) - 1)
+
+    return redirect(f"/{entries[entry]}")
