@@ -19,6 +19,7 @@ def page(request, title):
     contentMd = util.get_entry(title)
 
     if not contentMd:
+        # Find all results that the title is a substring of and if there isn't any display an error
         results = [entry for entry in util.list_entries() if title.lower() in entry.lower()]
 
         if len(results) == 0:
@@ -29,7 +30,7 @@ def page(request, title):
         return render(request, "encyclopedia/search.html", {
             "title": title,
             "results": results
-        })
+        }) #list all the results
 
     content = util.markdown_to_html(contentMd)
 
@@ -43,12 +44,14 @@ def new(request):
     if request.method == "POST":
         form = NewPageForm(request.POST)
         if form.is_valid():
+            # Chek if this title is already an existing entry
             existing_entry = any(entry == form.cleaned_data["title"] for entry in util.list_entries())
             
             if existing_entry:
                 messages.error(request, "An entry with this title already exists.")
                 return render(request, "encyclopedia/new.html", {"form": form})
-            util.save_entry(form.cleaned_data["title"], form.cleaned_data["content"])
+            util.save_entry(form.cleaned_data["title"], form.cleaned_data["content"]) # save the new entry
+            return redirect(reverse("encyclopedia:page", kwargs={"title": form.cleaned_data["title"]}))
         else:
             return render(request, "encyclopedia/new.html", {"form": form})
 
@@ -59,7 +62,8 @@ def edit(request, title):
     if request.method == "POST":
         form = NewPageForm(request.POST)
         if form.is_valid():
-            util.save_entry(form.cleaned_data["title"], form.cleaned_data["content"])
+            util.save_entry(form.cleaned_data["title"], form.cleaned_data["content"]) # save as new entry
+            return redirect(reverse("encyclopedia:page", kwargs={"title": title}))
     else:
         return render(request, "encyclopedia/new.html", {"form": form})
 
@@ -77,4 +81,4 @@ def random_page(request):
     entries = util.list_entries()
     entry = random.randint(0, len(entries) - 1)
 
-    return redirect(f"/{entries[entry]}")
+    return redirect(reverse("encyclopedia:page", kwargs={"title": entries[entry]}))
